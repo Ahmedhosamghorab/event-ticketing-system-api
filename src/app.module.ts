@@ -1,7 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigType } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { appConfig, databaseConfig, validationSchema } from './config';
+import {
+  appConfig,
+  databaseConfig,
+  jwtConfig,
+  validationSchema,
+} from './config';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -13,7 +20,7 @@ import { appConfig, databaseConfig, validationSchema } from './config';
       envFilePath: process.env.NODE_ENV
         ? [`.env.${process.env.NODE_ENV}`, '.env']
         : ['.env'],
-      load: [appConfig, databaseConfig],
+      load: [appConfig, databaseConfig, jwtConfig],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -34,6 +41,8 @@ import { appConfig, databaseConfig, validationSchema } from './config';
         migrations: [__dirname + '/database/migrations/**/*{.ts,.js}'],
       }),
     }),
+    UsersModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [],
