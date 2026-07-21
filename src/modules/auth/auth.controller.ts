@@ -20,6 +20,8 @@ import { AuthResponseDto, UserPayloadDto } from './dto/auth-response.dto';
 import { Public } from 'src/common/decorators/public.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { ResponseBuilder } from 'src/common/helpers/response-builder.helper';
+import { ApiResponseDto } from 'src/common/dtos/api-response.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -42,8 +44,11 @@ export class AuthController {
     status: HttpStatus.BAD_REQUEST,
     description: 'Validation error',
   })
-  register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
-    return this.authService.register(registerDto);
+  async register(
+    @Body() registerDto: RegisterDto,
+  ): Promise<ApiResponseDto<AuthResponseDto>> {
+    const result = await this.authService.register(registerDto);
+    return ResponseBuilder.success(result, 'User successfully registered');
   }
 
   @Public()
@@ -59,8 +64,11 @@ export class AuthController {
     status: HttpStatus.UNAUTHORIZED,
     description: 'Invalid credentials',
   })
-  login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+  ): Promise<ApiResponseDto<AuthResponseDto>> {
+    const result = await this.authService.login(loginDto);
+    return ResponseBuilder.success(result, 'User successfully authenticated');
   }
 
   @Get('me')
@@ -73,7 +81,13 @@ export class AuthController {
     type: UserPayloadDto,
   })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
-  getProfile(@CurrentUser('id') userId: string): Promise<UserPayloadDto> {
-    return this.authService.getProfile(userId);
+  async getProfile(
+    @CurrentUser('id') userId: string,
+  ): Promise<ApiResponseDto<UserPayloadDto>> {
+    const result = await this.authService.getProfile(userId);
+    return ResponseBuilder.success(
+      result,
+      'User profile retrieved successfully',
+    );
   }
 }

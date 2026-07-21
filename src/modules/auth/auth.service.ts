@@ -21,7 +21,7 @@ export class AuthService {
 
     return {
       accessToken,
-      user: this.sanitizeUser(user),
+      user,
     };
   }
 
@@ -39,7 +39,7 @@ export class AuthService {
 
     return {
       accessToken,
-      user: this.sanitizeUser(user),
+      user,
     };
   }
 
@@ -59,7 +59,7 @@ export class AuthService {
 
   async getProfile(userId: string): Promise<UserPayloadDto> {
     const user = await this.usersService.findOne(userId);
-    return this.sanitizeUser(user);
+    return user;
   }
 
   private async generateAccessToken(user: User): Promise<string> {
@@ -69,15 +69,5 @@ export class AuthService {
       role: user.role,
     };
     return this.jwtService.signAsync(payload);
-  }
-
-  private sanitizeUser(user: User): UserPayloadDto {
-    return {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      firstName: user.firstName,
-      lastName: user.lastName,
-    };
   }
 }

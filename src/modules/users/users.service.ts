@@ -9,6 +9,7 @@ import * as bcrypt from 'bcryptjs';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { PaginationDto } from 'src/common/dtos/pagenation.dto';
 
 @Injectable()
 export class UsersService {
@@ -33,7 +34,6 @@ export class UsersService {
       lastName: createUserDto.lastName,
       role: createUserDto.role,
     });
-
     return this.userRepository.save(user);
   }
 
@@ -45,8 +45,30 @@ export class UsersService {
     return this.userRepository.findOne({ where: { id } });
   }
 
-  async findAll(): Promise<User[]> {
-    return this.userRepository.find();
+  async findAll(paginationDto: PaginationDto): Promise<{
+    data: User[];
+    meta: { page: number; limit: number; total: number; totalPages: number };
+  }> {
+    const page = paginationDto?.page || 1;
+    const limit = paginationDto?.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.userRepository.findAndCount({
+      skip,
+      take: limit,
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    };
   }
 
   async findOne(id: string): Promise<User> {

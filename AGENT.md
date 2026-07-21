@@ -94,9 +94,10 @@ Controllers should only:
 - Receive requests
 - Validate input
 - Call services
-- Return responses
+- Return responses (wrapped via `ResponseBuilder.success(...)` — see **API Response Convention**)
 
 Never put business logic inside controllers.
+Never return raw entities, arrays, or plain objects directly.
 
 ---
 
@@ -110,6 +111,7 @@ Services should:
 - Be reusable
 - Throw proper NestJS exceptions
 - Never access request objects directly
+- Return entities, DTOs, or domain models only — never `ResponseBuilder` or HTTP-specific response objects. Response formatting belongs exclusively to the controller and the global `ResponseInterceptor`.
 
 ---
 
@@ -198,33 +200,131 @@ Return proper HTTP status codes.
 All list endpoints must support pagination via query params:
 
 - `page` (default `1`), `limit` (default `20`, max `100`)
-- Response envelope:
+- Support optional `sort` (e.g. `sort=createdAt:desc`) and basic filter query params where relevant to the resource.
+
+The pagination `meta` block returned to the client is:
 
 ```json
 {
-  "data": [],
-  "meta": {
-    "total": 0,
-    "page": 1,
-    "limit": 20,
-    "totalPages": 0
-  }
+  "page": 1,
+  "limit": 20,
+  "total": 0,
+  "totalPages": 0
 }
 ```
 
-- Support optional `sort` (e.g. `sort=createdAt:desc`) and basic filter query params where relevant to the resource.
+This `meta` object is passed as the third argument to `ResponseBuilder.success(...)` — see **API Response Convention** for the full envelope.
 
 ---
 
-## Swagger
+## API Response Convention
 
-Always document:
+All successful HTTP responses **must** follow the standardized response format using the global `ResponseInterceptor`. Controllers must not return raw entities, arrays, or plain objects — always wrap results with `ResponseBuilder.success(...)`.
 
-- Controllers (`@ApiTags`)
-- Endpoints (`@ApiOperation`, `@ApiResponse`)
-- DTOs (`@ApiProperty`)
-- Parameters (`@ApiParam`, `@ApiQuery`)
-- Auth requirements (`@ApiBearerAuth`)
+### Standard Response Shape
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Operation completed successfully",
+  "data": {},
+  "meta": {},
+  "timestamp": "2026-07-22T12:00:00.000Z"
+}
+```
+
+### Response Rules
+
+- Always return responses using `ResponseBuilder.success(...)`.
+- Never manually set `success`, `statusCode`, or `timestamp` — these are injected automatically by the global `ResponseInterceptor`.
+- Every successful response must include a descriptive `message`.
+- `meta` is optional and should only be included when needed (e.g. pagination).
+- Never return raw entities or arrays directly from a controller.
+- Throw proper HTTP exceptions instead of returning error objects in a 200 response.
+- Never expose internal implementation details (stack traces, entity internals, ORM metadata) in any response.
+
+### Data Rules
+
+The `data` field contains the actual response payload.
+
+**Single resource** — return the resource directly.
+
+✅
+```json
+{ "data": { "id": "...", "email": "user@example.com", "firstName": "John" } }
+```
+❌
+```json
+{ "data": { "user": { "id": "...", "email": "user@example.com" } } }
+```
+
+**Collection** — return the array directly.
+
+✅
+```json
+{ "data": [ { "id": "..." } ] }
+```
+❌
+```json
+{ "data": { "users": [ { "id": "..." } ] } }
+```
+
+**Multiple independent values** (e.g. auth endpoints) — wrap them in an object.
+
+✅
+```json
+{ "data": { "user": { "id": "..." }, "accessToken": "...", "refreshToken": "..." } }
+```
+
+Examples: login, register (if tokens are returned), refresh token, or any endpoint returning more than one resource/value.
+
+### Controller Example
+
+```ts
+@Get(':id')
+async findOne(@Param('id') id: string) {
+  const user = await this.usersService.findOne(id);
+
+  return ResponseBuilder.success(
+    user,
+    'User retrieved successfully',
+  );
+}
+```
+
+### Pagination Example
+
+```ts
+@Get()
+async findAll(@Query() paginationDto: PaginationDto) {
+  const result = await this.usersService.findAll(paginationDto);
+
+  return ResponseBuilder.success(
+    result.data,
+    'Users retrieved successfully',
+    result.meta,
+  );
+}
+```
+
+Resulting response:
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Users retrieved successfully",
+  "data": [ ... ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 100,
+    "totalPages": 10
+  },
+  "timestamp": "2026-07-22T12:00:00.000Z"
+}
+```
 
 ---
 
@@ -277,14 +377,6 @@ Never leak stack traces, internal error messages, or ORM-level errors to the cli
 - Use camelCase for variables and methods.
 - Use kebab-case for file names.
 - Use plural names for modules and routes where appropriate.
-
----
-
-## Response Rules
-
-- Return consistent API responses using the pagination envelope (for lists) and direct DTOs (for single resources).
-- Never expose internal implementation details (stack traces, entity internals, ORM metadata).
-- Throw proper HTTP exceptions instead of returning error objects in a 200 response.
 
 ---
 

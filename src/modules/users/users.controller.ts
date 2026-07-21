@@ -8,8 +8,14 @@ import {
   Delete,
   UseGuards,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -17,6 +23,8 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { UserRole } from './enums/user-role.enum';
+import { PaginationDto } from 'src/common/dtos/pagenation.dto';
+import { ResponseBuilder } from 'src/common/helpers/response-builder.helper';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -29,41 +37,50 @@ export class UsersController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new user (Admin)' })
   @ApiResponse({ status: 201, description: 'User successfully created' })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  async create(@Body() createUserDto: CreateUserDto) {
+    const user = await this.usersService.create(createUserDto);
+    return ResponseBuilder.success(user, 'User created successfully');
   }
 
   @Get()
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all users (Admin)' })
   @ApiResponse({ status: 200, description: 'List of users retrieved' })
-  findAll() {
-    return this.usersService.findAll();
+  async findAll(@Query() paginationDto: PaginationDto) {
+    const result = await this.usersService.findAll(paginationDto);
+    return ResponseBuilder.paginated(
+      result.data,
+      result.meta,
+      'Users retrieved successfully',
+    );
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'User details' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.findOne(id);
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    const user = await this.usersService.findOne(id);
+    return ResponseBuilder.success(user, 'User retrieved successfully');
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update user' })
   @ApiResponse({ status: 200, description: 'User updated' })
-  update(
+  async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    return this.usersService.update(id, updateUserDto);
+    const user = await this.usersService.update(id, updateUserDto);
+    return ResponseBuilder.success(user, 'User updated successfully');
   }
 
   @Delete(':id')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete user (Admin)' })
   @ApiResponse({ status: 200, description: 'User removed' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.remove(id);
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
+    await this.usersService.remove(id);
+    return ResponseBuilder.success(null, 'User deleted successfully');
   }
 }
