@@ -5,4 +5,3 @@ export class ApiResponseDto<T> {
     public readonly meta?: Record<string, any>,
   ) {}
 }
-

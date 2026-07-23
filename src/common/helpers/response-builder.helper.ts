@@ -23,5 +23,3 @@ export class ResponseBuilder {
     return new ApiResponseDto(data, message, meta);
   }
 }
-
-
