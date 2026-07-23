@@ -6,7 +6,7 @@ import { User } from 'src/modules/users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto, UserPayloadDto } from './dto/auth-response.dto';
-import { JwtPayload } from './strategies/jwt.strategy';
+import { JwtPayload } from './types';
 
 @Injectable()
 export class AuthService {
