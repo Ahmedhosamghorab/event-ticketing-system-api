@@ -23,7 +23,7 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { UserRole } from './enums/user-role.enum';
-import { PaginationDto } from 'src/common/dtos/pagenation.dto';
+import { QueryUserDto } from './dto/query-user.dto';
 import { ResponseBuilder } from 'src/common/helpers/response-builder.helper';
 
 @ApiTags('Users')
@@ -46,8 +46,8 @@ export class UsersController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all users (Admin)' })
   @ApiResponse({ status: 200, description: 'List of users retrieved' })
-  async findAll(@Query() paginationDto: PaginationDto) {
-    const result = await this.usersService.findAll(paginationDto);
+  async findAll(@Query() queryDto: QueryUserDto) {
+    const result = await this.usersService.findAll(queryDto);
     return ResponseBuilder.paginated(
       result.data,
       result.meta,

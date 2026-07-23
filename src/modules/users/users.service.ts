@@ -9,7 +9,8 @@ import * as bcrypt from 'bcryptjs';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { PaginationDto } from 'src/common/dtos/pagenation.dto';
+import { QueryUserDto } from './dto/query-user.dto';
+import { PaginatedUsers } from './types';
 
 @Injectable()
 export class UsersService {
@@ -45,19 +46,30 @@ export class UsersService {
     return this.userRepository.findOne({ where: { id } });
   }
 
-  async findAll(paginationDto: PaginationDto): Promise<{
-    data: User[];
-    meta: { page: number; limit: number; total: number; totalPages: number };
-  }> {
-    const page = paginationDto?.page || 1;
-    const limit = paginationDto?.limit || 10;
+  async findAll(queryDto?: QueryUserDto): Promise<PaginatedUsers> {
+    const page = queryDto?.page || 1;
+    const limit = queryDto?.limit || 10;
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this.userRepository.findAndCount({
-      skip,
-      take: limit,
-    });
+    const queryBuilder = this.userRepository.createQueryBuilder('user');
 
+    if (queryDto?.role) {
+      queryBuilder.andWhere('user.role = :role', { role: queryDto.role });
+    }
+
+    if (queryDto?.search) {
+      queryBuilder.andWhere(
+        '(LOWER(user.email) LIKE LOWER(:search) OR LOWER(user.firstName) LIKE LOWER(:search) OR LOWER(user.lastName) LIKE LOWER(:search))',
+        { search: `%${queryDto.search}%` },
+      );
+    }
+
+    queryBuilder
+      .orderBy('user.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
     const totalPages = Math.ceil(total / limit);
 
     return {
